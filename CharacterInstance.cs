@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace FireEmblemDiscordBot {    
     public class CharacterInstance {
         // Using a dictionary to hold the stats in because it's simple.
-        public Dictionary<string, int> stats = new Dictionary<string, int> () {
+        public Dictionary<String, int> stats = new Dictionary<String, int> () {
             {"HP", 0},
             {"STR", 0},
             {"INT", 0},
@@ -14,8 +14,8 @@ namespace FireEmblemDiscordBot {
             {"DEF", 0},
             {"RES", 0}
         };
-        public string name;
-        public CharacterInstance (string inputName) {
+        public String name;
+        public CharacterInstance (String inputName) {
             name = inputName;
         }
 
