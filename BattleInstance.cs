@@ -1,4 +1,5 @@
 using System;
+using FireEmblemDiscordBot;
 
 namespace FireEmblemDiscordBot {
     class BattleInstance {
