@@ -15,8 +15,10 @@ namespace FireEmblemDiscordBot {
             {"RES", 0}
         };
         public String name;
-        public CharacterInstance (String inputName) {
+        public WeaponInstance equippedWeapon;
+        public CharacterInstance (String inputName, WeaponInstance inputWeapon = null) {
             name = inputName;
+            equippedWeapon = inputWeapon;
         }
 
         public void setAllStats (int[] statArray) {

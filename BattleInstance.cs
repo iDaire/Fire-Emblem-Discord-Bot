@@ -4,13 +4,20 @@ using FireEmblemDiscordBot;
 namespace FireEmblemDiscordBot {
     class BattleInstance {
         public static void Main (String[] args) {
-            // Stats Go In This Order: HP, STR, INT, SPD, SKL, LCK, DEF, RES
+            // Stats Go In This Order For Characters: HP, Strength, Magic / Intellect, Speed, Skill, Luck, Defense, Resistance
+            // Stats Go In This Order For Weapons: Might, Weight, Hit, Crit, Range
 
-            CharacterInstance exampleCharacter = new CharacterInstance("Lyndis");
-            exampleCharacter.setAllStats(new int[] {16, 4, 1, 7, 9, 5, 2, 0});
+            WeaponInstance Alondite = new WeaponInstance("Alondite", "Sword");
+            Alondite.setAllStats(new int[] {18, 20, 80, 5, 1});
 
-            CharacterInstance enemyCharacter = new CharacterInstance("Batta");
-            enemyCharacter.setAllStats(new int[] {21, 5, 0, 1, 3, 2, 3, 0});
+            WeaponInstance Ragnell = new WeaponInstance("Ragnell", "Sword");
+            Alondite.setAllStats(new int[] {18, 20, 80, 5, 1});
+
+            CharacterInstance exampleCharacter = new CharacterInstance("Ike");
+            exampleCharacter.setAllStats(new int[] {65, 37, 9, 35, 40, 22, 32, 15});
+
+            CharacterInstance enemyCharacter = new CharacterInstance("Black Knight");
+            enemyCharacter.setAllStats(new int[] {70, 38, 18, 30, 40, 20, 35, 25});
 
             Console.WriteLine("{0} and {1} will now fight...", exampleCharacter.name, enemyCharacter.name);
             Console.ReadLine();
@@ -20,6 +27,7 @@ namespace FireEmblemDiscordBot {
             int turnLimit = 20;
             CharacterInstance winningCharacter = null;
             for (int i = 0; i < turnLimit; i++) {
+                // This all is just displaying the information from each round onto the console in different colors.
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("Round {0}", i + 1);
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -27,15 +35,31 @@ namespace FireEmblemDiscordBot {
                 Console.WriteLine("{0} has {1} HP left.\n", enemyCharacter.name, enemyCharacter.stats["HP"]);
                 Console.ForegroundColor = ConsoleColor.White;
 
-                if (doCharacterTurn(exampleCharacter, enemyCharacter)) {
-                    winningCharacter = exampleCharacter;
-                    break;
+                /* This is to check if the battle is over. 
+                * Because there is a for loop inside a for loop, we have to be careful with break positioning. */
+                Boolean isBattleOver = false;
+
+                // A character gets to move twice in a round if they have four more speed than the enemy. 
+                int numMoves = (calculateAttackSpeed(exampleCharacter) - 4) >= enemyCharacter.stats["SPD"] ? 2 : 1;
+                for (int a = 0; a < numMoves; a++) {
+                    if (doCharacterTurn(exampleCharacter, enemyCharacter)) {
+                        winningCharacter = exampleCharacter;
+                        isBattleOver = true;
+                        break;
+                    }
                 }
+                if (isBattleOver) break;
                 Console.ReadLine();
-                if (doCharacterTurn(enemyCharacter, exampleCharacter)) {
-                    winningCharacter = enemyCharacter;
-                    break;
+
+                numMoves = (calculateAttackSpeed(enemyCharacter) - 4) >= exampleCharacter.stats["SPD"] ? 2 : 1;
+                for (int a = 0; a < numMoves; a++) {
+                    if (doCharacterTurn(enemyCharacter, exampleCharacter)) {
+                        winningCharacter = enemyCharacter;
+                        isBattleOver = true;
+                        break;
+                    }
                 }
+                if (isBattleOver) break;
                 Console.ReadLine();
             }
             // Later on, we're going to determine the winner by who has lower health, but for now, this works.
@@ -83,6 +107,13 @@ namespace FireEmblemDiscordBot {
             return isTargetDead;
         }
 
-
+        public static int calculateAttackSpeed (CharacterInstance inputCharacter) {
+            // If a weapon weighs more than a character is able to handle, their speed gets reduced.
+            int valueToReturn = 0;
+            if (inputCharacter.equippedWeapon != null && (inputCharacter.equippedWeapon.stats["WGT"] > inputCharacter.stats["STR"]))
+                valueToReturn = inputCharacter.stats["SPD"] - (inputCharacter.equippedWeapon.stats["WGT"] - inputCharacter.stats["STR"]);
+            else valueToReturn = inputCharacter.stats["SPD"];
+            return valueToReturn; 
+        }
     }
 }
