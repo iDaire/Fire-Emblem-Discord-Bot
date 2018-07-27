@@ -12,10 +12,12 @@ namespace FireEmblemDiscordBot {
             {"RNG", 1}
         };
         public String name, type, reave;
-        public WeaponInstance (String inputName, String inputType, String inputReave = "None") {
+        public Boolean isMagic;
+        public WeaponInstance (String inputName, String inputType, String inputReave = "None", Boolean isMagic = false) {
             name = inputName;
             type = inputType;
             reave = inputReave;
+            this.isMagic = isMagic;
         }
 
         public void setAllStats (int[] statArray) {
