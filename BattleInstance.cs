@@ -1,3 +1,5 @@
+// What Has Yet To Be Done: Magic vs Magic, Magic vs Phyiscal, Ranged Weaponry, Skills
+
 using System;
 using FireEmblemDiscordBot;
 
@@ -6,17 +8,18 @@ namespace FireEmblemDiscordBot {
         public static void Main (String[] args) {
             // Stats Go In This Order For Characters: HP, Strength, Magic / Intellect, Speed, Skill, Luck, Defense, Resistance
             // Stats Go In This Order For Weapons: Might, Weight, Hit, Crit, Range
+            BattleFunctionHolder B = new BattleFunctionHolder();
 
             WeaponInstance Alondite = new WeaponInstance("Alondite", "Sword");
             Alondite.setAllStats(new int[] {18, 20, 80, 5, 1});
 
             WeaponInstance Ragnell = new WeaponInstance("Ragnell", "Sword");
-            Alondite.setAllStats(new int[] {18, 20, 80, 5, 1});
+            Ragnell.setAllStats(new int[] {18, 20, 80, 5, 1});
 
-            CharacterInstance exampleCharacter = new CharacterInstance("Ike");
+            CharacterInstance exampleCharacter = new CharacterInstance("Ike", Ragnell);
             exampleCharacter.setAllStats(new int[] {65, 37, 9, 35, 40, 22, 32, 15});
 
-            CharacterInstance enemyCharacter = new CharacterInstance("Black Knight");
+            CharacterInstance enemyCharacter = new CharacterInstance("Black Knight", Alondite);
             enemyCharacter.setAllStats(new int[] {70, 38, 18, 30, 40, 20, 35, 25});
 
             Console.WriteLine("{0} and {1} will now fight...", exampleCharacter.name, enemyCharacter.name);
@@ -40,9 +43,9 @@ namespace FireEmblemDiscordBot {
                 Boolean isBattleOver = false;
 
                 // A character gets to move twice in a round if they have four more speed than the enemy. 
-                int numMoves = (calculateAttackSpeed(exampleCharacter) - 4) >= enemyCharacter.stats["SPD"] ? 2 : 1;
+                int numMoves = (B.calculateAttackSpeed(exampleCharacter) - 4) >= enemyCharacter.stats["SPD"] ? 2 : 1;
                 for (int a = 0; a < numMoves; a++) {
-                    if (doCharacterTurn(exampleCharacter, enemyCharacter)) {
+                    if (B.doCharacterTurn(exampleCharacter, enemyCharacter)) {
                         winningCharacter = exampleCharacter;
                         isBattleOver = true;
                         break;
@@ -51,9 +54,10 @@ namespace FireEmblemDiscordBot {
                 if (isBattleOver) break;
                 Console.ReadLine();
 
-                numMoves = (calculateAttackSpeed(enemyCharacter) - 4) >= exampleCharacter.stats["SPD"] ? 2 : 1;
+                // Let's do this twice.
+                numMoves = (B.calculateAttackSpeed(enemyCharacter) - 4) >= exampleCharacter.stats["SPD"] ? 2 : 1;
                 for (int a = 0; a < numMoves; a++) {
-                    if (doCharacterTurn(enemyCharacter, exampleCharacter)) {
+                    if (B.doCharacterTurn(enemyCharacter, exampleCharacter)) {
                         winningCharacter = enemyCharacter;
                         isBattleOver = true;
                         break;
@@ -70,25 +74,40 @@ namespace FireEmblemDiscordBot {
             Console.ReadLine(); // Holding the console window open.
         } 
 
-        public static Boolean doCharacterTurn (CharacterInstance doingCharacter, CharacterInstance targetCharacter) {
-            // 90 is a placeholder here for the weapon rate, which needs to be changed later. Alongside that, we need to add weapon advantages later as well.
-            int hitRate = ((doingCharacter.stats["SKL"]) * 2) + 90 + ((doingCharacter.stats["LCK"] - (targetCharacter.stats["LCK"] / 2)) / 2);
-            // We're using regular speed here, but we have to substitute it later for attack speed.
-            int dodgeRate = (targetCharacter.stats["SPD"] * 2) + targetCharacter.stats["LCK"];
+    }
+
+    public class BattleFunctionHolder {
+        public Boolean doCharacterTurn (CharacterInstance doingCharacter, CharacterInstance targetCharacter) {
+            // The weapon advantages and the hit rate equation were taken from Fire Emblem 7 with tweaks, but the weapon weight affecting speed was taken from Fire Emblem 9
+            int hitRate = ((doingCharacter.stats["SKL"]) * 2) + doingCharacter.equippedWeapon.stats["HIT"] + ((doingCharacter.stats["LCK"] - (targetCharacter.stats["LCK"] / 2)) / 2);
+            hitRate += 15 * calculateWeaponEffectiveness(doingCharacter.equippedWeapon, targetCharacter.equippedWeapon);
+            if (hitRate < 0) hitRate = 0;
+
+            // The dodge rate equation was taken from Fire Emblem 7 with no changes.
+            int dodgeRate = (calculateAttackSpeed(targetCharacter) * 2) + targetCharacter.stats["LCK"];
+
+            // We put them together to get the actual chance of hitting the opponent.
             int hitChance = hitRate - dodgeRate;
-            // Again, we're using substitutes here. 20 is a placeholder for the weapon crit.
-            int critRate = 20 + (doingCharacter.stats["SKL"] / 2);
-            // No substitutes here. This is how it actually is.
+
+            // The weapon crit equation was taken from Fire Emblem 7 with no changes.
+            int critRate = doingCharacter.equippedWeapon.stats["CRT"] + (doingCharacter.stats["SKL"] / 2);
+
+            // The crit dodge equation was taken from Fire Emblem 7 with no changes.
             int critDodgeRate = targetCharacter.stats["LCK"];
+
+            // Again, let's put it together to get the actual chance of doing a critical hit.
             int critChance = critRate - critDodgeRate;
-            // Let's calculate the potential damage here to be able to use it later. We need to add weapon might to this later just like everything else.
-            int potentialDamage = doingCharacter.stats["STR"] - targetCharacter.stats["DEF"]; 
 
-            // We're not using true hit, meaning we're taking two dice, rolling both of them, and using the average of the two in order to determine RNG.
-            // This results in a type of bell curve. 80% hitrate is closer to 92.5% and 20% is closer to 8.5%.
+            // Let's calculate the potential damage and also add in weapon advantages again. MUST MAKE MAGIC DAMAGE LATER.
+            int potentialDamage = (doingCharacter.stats["STR"] + doingCharacter.equippedWeapon.stats["MGT"]) - targetCharacter.stats["DEF"]; 
+            potentialDamage += 1 * calculateWeaponEffectiveness(doingCharacter.equippedWeapon, targetCharacter.equippedWeapon);
+            if (potentialDamage < 0) potentialDamage = 0;
 
+            // Roll two dice, one for hit rate and one for crit rate.
             Random randomNumberGenerator = new Random();
             int diceOne = randomNumberGenerator.Next(0, 100), diceTwo = randomNumberGenerator.Next(0, 100);
+
+            // If there's a hit, we proceed to check for a crit. You can miss, hit, and crit hit.
             if (diceOne <= hitChance) { 
                 if (diceTwo <= critChance) {
                     potentialDamage *= 3;
@@ -98,6 +117,7 @@ namespace FireEmblemDiscordBot {
                 targetCharacter.stats["HP"] -= potentialDamage;
             } else Console.WriteLine("{0} has not hit {1} (HIT RATE: {2}%) (CRIT RATE: {3}%)", doingCharacter.name, targetCharacter.name, hitChance, critChance);
 
+            // Let's check if the enemy is dead before continuing the round.
             Boolean isTargetDead = false;
             if (targetCharacter.stats["HP"] <= 0) {
                 targetCharacter.stats["HP"] = 0;
@@ -107,13 +127,52 @@ namespace FireEmblemDiscordBot {
             return isTargetDead;
         }
 
-        public static int calculateAttackSpeed (CharacterInstance inputCharacter) {
+        public int calculateAttackSpeed (CharacterInstance inputCharacter) {
             // If a weapon weighs more than a character is able to handle, their speed gets reduced.
             int valueToReturn = 0;
             if (inputCharacter.equippedWeapon != null && (inputCharacter.equippedWeapon.stats["WGT"] > inputCharacter.stats["STR"]))
                 valueToReturn = inputCharacter.stats["SPD"] - (inputCharacter.equippedWeapon.stats["WGT"] - inputCharacter.stats["STR"]);
             else valueToReturn = inputCharacter.stats["SPD"];
             return valueToReturn; 
+        }
+
+        public int calculateWeaponEffectiveness (WeaponInstance doingWeapon, WeaponInstance targetWeapon) {
+            // Swords beat Axes beat Lances beat Swords.
+            int valueToReturn = 0, activeMultiplier = 1;
+            String doingType, targetType;
+
+            // If the weapon reaves something, double the multiplier.
+            if (doingWeapon.reave != "None") {
+                activeMultiplier *= 2;
+                doingType = doingWeapon.reave;
+            } else {
+                doingType = doingWeapon.type;
+            }
+            // If the enemy weapon reaves something, double the multiplier. The multiplier can go up to 4.
+            if (targetWeapon.reave != "None") {
+                activeMultiplier *= 2;
+                targetType = targetWeapon.reave;
+            } else {
+                targetType = targetWeapon.type;
+            }
+
+            // If the weapons are the same, there's no advantage to be had, but if not, we add advanatages up.
+            if (doingType.Equals(targetType)) return valueToReturn;
+            else {
+                if (doingType.Equals("Sword")) {
+                    if (targetType.Equals("Lance")) valueToReturn = -1;
+                    else valueToReturn = 1;
+                } else if (doingType.Equals("Axe")) {
+                    if (targetType.Equals("Sword")) valueToReturn = -1;
+                    else valueToReturn = 1;
+                } else if (doingType.Equals("Lance")) {
+                    if (targetType.Equals("Axe")) valueToReturn = -1;
+                    else valueToReturn = 1;
+                }
+            }
+            valueToReturn *= activeMultiplier;
+            return valueToReturn;
+
         }
     }
 }
